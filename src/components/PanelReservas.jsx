@@ -15,22 +15,26 @@ export default function PanelReservas() {
   useEffect(() => {
     obtenerReservas();
 
-    if (Notification.permission !== 'granted') {
-      Notification.requestPermission();
-    }
+    // Comentado: Solicitar permiso para notificaciones push
+    // if (Notification.permission !== 'granted') {
+    //   Notification.requestPermission();
+    // }
 
     socket.on('nueva-reserva', (nueva) => {
       setReservas((prev) => [nueva, ...prev]);
       toast.info(`Nueva reserva de ${nueva.nombre}`);
-      const audio = new Audio('/sonido.mp3');
-      audio.play();
 
-      if (Notification.permission === 'granted') {
-        new Notification('Nueva reserva recibida', {
-          body: `${nueva.nombre} reservó para ${nueva.personas} persona(s).`,
-          icon: '/icono-notificacion.png',
-        });
-      }
+      // Comentado: Sonido
+      // const audio = new Audio('/sonido.mp3');
+      // audio.play();
+
+      // Comentado: Notificación push del navegador
+      // if (Notification.permission === 'granted') {
+      //   new Notification('Nueva reserva recibida', {
+      //     body: `${nueva.nombre} reservó para ${nueva.personas} persona(s).`,
+      //     icon: '/icono-notificacion.png',
+      //   });
+      // }
     });
 
     return () => socket.off('nueva-reserva');
