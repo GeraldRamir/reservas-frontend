@@ -17,8 +17,7 @@ export default function PanelReservas() {
   const [reservas, setReservas] = useState([]);
 
   useEffect(() => {
-    const acceso = localStorage.getItem('accesoAdmin');
-    if (acceso === 'true') setAutorizado(true);
+setAutorizado(true);
   }, []);
 
 useEffect(() => {
