@@ -17,11 +17,12 @@ export default function ReservaForm() {
     e.preventDefault();
 
     try {
-      const res = await fetch('http://localhost:3001/api/reservas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reservas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+
 
       if (!res.ok) throw new Error('Error al enviar reserva');
 

@@ -9,7 +9,7 @@ import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-const socket = io('http://localhost:3001');
+const socket = io(import.meta.env.VITE_BACKEND_URL);
 
 export default function PanelReservas() {
   const [clave, setClave] = useState('');
@@ -52,7 +52,7 @@ useEffect(() => {
 
   const obtenerReservas = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/reservas');
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reservas`);
       const data = await res.json();
       setReservas(data);
     } catch (err) {
