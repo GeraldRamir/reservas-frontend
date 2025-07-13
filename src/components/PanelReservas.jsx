@@ -5,40 +5,47 @@ import 'react-toastify/dist/ReactToastify.css';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { FaFileExcel, FaUsers, FaUserPlus, FaClock } from 'react-icons/fa';
+
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 const socket = io(import.meta.env.VITE_BACKEND_URL);
 
 export default function PanelReservas() {
   const [reservas, setReservas] = useState([]);
+  const [clave, setClave] = useState('');
+  const [autorizado, setAutorizado] = useState(false);
 
   useEffect(() => {
+    const acceso = localStorage.getItem('accesoAdmin');
+    if (acceso === 'true') setAutorizado(true);
+  }, []);
+
+  useEffect(() => {
+    if (!autorizado) return;
     obtenerReservas();
-
-    // Comentado: Solicitar permiso para notificaciones push
-    // if (Notification.permission !== 'granted') {
-    //   Notification.requestPermission();
-    // }
-
     socket.on('nueva-reserva', (nueva) => {
       setReservas((prev) => [nueva, ...prev]);
       toast.info(`Nueva reserva de ${nueva.nombre}`);
-
-      // Comentado: Sonido
-      // const audio = new Audio('/sonido.mp3');
-      // audio.play();
-
-      // Comentado: Notificación push del navegador
-      // if (Notification.permission === 'granted') {
-      //   new Notification('Nueva reserva recibida', {
-      //     body: `${nueva.nombre} reservó para ${nueva.personas} persona(s).`,
-      //     icon: '/icono-notificacion.png',
-      //   });
-      // }
     });
-
     return () => socket.off('nueva-reserva');
-  }, []);
+  }, [autorizado]);
+
+  const verificarClave = (e) => {
+    e.preventDefault();
+    if (clave === '1234admin') {
+      localStorage.setItem('accesoAdmin', 'true');
+      setAutorizado(true);
+    } else {
+      toast.error('Clave incorrecta');
+    }
+  };
+
+  const cerrarSesion = () => {
+    localStorage.removeItem('accesoAdmin');
+    setAutorizado(false);
+    setClave('');
+  };
 
   const obtenerReservas = async () => {
     try {
@@ -59,6 +66,18 @@ export default function PanelReservas() {
     saveAs(data, 'reservas.xlsx');
   };
 
+  const eliminarReserva = async (id) => {
+    try {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reservas/${id}`, {
+        method: 'DELETE',
+      });
+      setReservas((prev) => prev.filter((r) => r._id !== id));
+      toast.success('Reserva eliminada');
+    } catch (err) {
+      toast.error('Error al eliminar');
+    }
+  };
+
   const totalPersonas = reservas.reduce((acc, r) => acc + r.personas, 0);
   const ultimaReserva = reservas[0];
   const graficoData = reservas.reduce((acc, r) => {
@@ -68,70 +87,112 @@ export default function PanelReservas() {
   }, {});
   const dataGrafico = Object.keys(graficoData).map(fecha => ({ fecha, personas: graficoData[fecha] }));
 
+  if (!autorizado) {
+    return (
+      <div className="container d-flex align-items-center justify-content-center min-vh-100 bg-light">
+        <div className="card shadow p-4 w-100" style={{ maxWidth: '400px' }}>
+          <h4 className="text-center mb-4">🔐 Acceso Admin</h4>
+          <form onSubmit={verificarClave}>
+            <input
+              type="password"
+              value={clave}
+              onChange={(e) => setClave(e.target.value)}
+              placeholder="Ingrese clave"
+              className="form-control mb-3"
+            />
+            <button type="submit" className="btn btn-primary w-100">Entrar</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 p-6">
+    <div className="bg-body-tertiary min-vh-100">
       <ToastContainer />
-      <header className="mb-8 bg-white shadow-lg rounded-xl p-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-blue-600">📊 Panel de Reservas</h1>
-        <button
-          onClick={exportarExcel}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl transition duration-200"
-        >
-          <FaFileExcel />
-          Exportar Excel
-        </button>
-      </header>
+      <nav className="navbar navbar-expand-lg navbar-dark bg-primary px-4">
+        <div className="container-fluid">
+          <span className="navbar-brand">📊 Panel de Reservas</span>
+          <div className="d-flex gap-2">
+            <button onClick={exportarExcel} className="btn btn-success">Exportar Excel</button>
+            <button onClick={cerrarSesion} className="btn btn-danger">Cerrar sesión</button>
+          </div>
+        </div>
+      </nav>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-white rounded-xl shadow p-6 flex items-center gap-4">
-          <FaUserPlus className="text-blue-500 text-3xl" />
-          <div>
-            <p className="text-gray-500 font-semibold">Total reservas</p>
-            <p className="text-2xl font-bold">{reservas.length}</p>
+      <div className="container py-4">
+        <div className="row g-4 mb-4">
+          <div className="col-md-4">
+            <div className="card text-bg-light shadow">
+              <div className="card-body">
+                <h5 className="card-title">Total Reservas</h5>
+                <p className="display-6 fw-bold">{reservas.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-4">
+            <div className="card text-bg-light shadow">
+              <div className="card-body">
+                <h5 className="card-title">Personas Totales</h5>
+                <p className="display-6 fw-bold">{totalPersonas}</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-4">
+            <div className="card text-bg-light shadow">
+              <div className="card-body">
+                <h5 className="card-title">Última Reserva</h5>
+                <p className="fw-bold mb-0">{ultimaReserva?.nombre}</p>
+                <small className="text-muted">{ultimaReserva?.fecha}</small>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-6 flex items-center gap-4">
-          <FaUsers className="text-green-500 text-3xl" />
-          <div>
-            <p className="text-gray-500 font-semibold">Personas totales</p>
-            <p className="text-2xl font-bold">{totalPersonas}</p>
+        <div className="card mb-5 shadow">
+          <div className="card-header bg-primary text-white">📈 Personas por Fecha</div>
+          <div className="card-body">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={dataGrafico}>
+                <XAxis dataKey="fecha" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="personas" fill="#0d6efd" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-6 flex items-center gap-4">
-          <FaClock className="text-orange-500 text-3xl" />
-          <div>
-            <p className="text-gray-500 font-semibold">Última reserva</p>
-            <p className="text-lg font-medium">{ultimaReserva?.nombre} - {ultimaReserva?.fecha}</p>
+        <div className="card shadow border-0">
+          <div className="card-header bg-primary text-white">📝 Lista de Reservas</div>
+          <div className="p-4">
+            <div className="row g-4">
+              {reservas.map((r, index) => (
+                <div key={r._id} className="col-md-6">
+                  <div className={`p-4 rounded shadow-sm text-dark border-start border-5 
+                    ${index % 4 === 0 ? 'bg-danger-subtle border-danger' :
+                      index % 4 === 1 ? 'bg-warning-subtle border-warning' :
+                      index % 4 === 2 ? 'bg-success-subtle border-success' :
+                      'bg-info-subtle border-info'}`}>
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <h5 className="fw-bold mb-1">{r.nombre}</h5>
+                        <small className="text-muted">{r.email}</small>
+                      </div>
+                      <button className="btn btn-sm btn-outline-danger" onClick={() => eliminarReserva(r._id)}>
+                        Eliminar
+                      </button>
+                    </div>
+                    <p className="mb-1">📅 <strong>{r.fecha}</strong></p>
+                    <p className="mb-1">👥 {r.personas} persona(s)</p>
+                    <p className="fst-italic text-muted">{r.mensaje || 'Sin mensaje adicional'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </section>
-
-      <section className="bg-white rounded-xl shadow p-6 mb-10">
-        <h3 className="text-xl font-semibold mb-4 text-blue-600">📈 Personas por Fecha</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={dataGrafico}>
-            <XAxis dataKey="fecha" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="personas" fill="#3b82f6" />
-          </BarChart>
-        </ResponsiveContainer>
-      </section>
-
-      <section className="bg-white rounded-xl shadow p-6">
-        <h3 className="text-xl font-semibold mb-4 text-blue-600">📝 Lista de Reservas</h3>
-        <ul className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-          {reservas.map((r) => (
-            <li key={r._id} className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg shadow-sm">
-              <p className="text-lg font-semibold">{r.nombre} <span className="text-sm text-gray-600">({r.email})</span></p>
-              <p>📅 <strong>{r.fecha}</strong> – 👥 {r.personas} persona(s)</p>
-              <p className="italic text-gray-700">{r.mensaje}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      </div>
     </div>
   );
 }

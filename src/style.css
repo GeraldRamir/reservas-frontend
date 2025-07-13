@@ -1,0 +1,23 @@
+.ticket-receipt {
+  border: 2px dashed #6c757d;
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Courier New', monospace;
+  background: #fffefc;
+  position: relative;
+}
+
+.ticket-header,
+.ticket-footer {
+  text-align: center;
+  border-bottom: 1px dashed #ccc;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+}
+
+.ticket-footer {
+  border-top: 1px dashed #ccc;
+  border-bottom: none;
+  margin-top: 10px;
+  padding-top: 5px;
+}
